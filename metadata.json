@@ -1,0 +1,5 @@
+{
+  "name": "Trippr - Smart Itinerary Parser",
+  "description": "Transforms raw travel text into structured, interactive itineraries with map links and logistics.",
+  "requestFramePermissions": []
+}
