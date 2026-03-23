@@ -100,12 +100,13 @@ const itinerarySchema: Schema = {
   required: ["title", "days"]
 };
 
-export const parseItinerary = async (text: string): Promise<TripItinerary> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY is not set in environment variables.");
+export const parseItinerary = async (text: string, userApiKey?: string): Promise<TripItinerary> => {
+  const apiKey = userApiKey || process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("請先設定您的 Google Gemini API Key。");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
     You are a detailed Travel Planner AI. 

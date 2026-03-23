@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parseItinerary } from './services/gemini';
 import { TripItinerary, ViewMode } from './types';
 import VisualItinerary from './components/VisualItinerary';
 import { generateMarkdown } from './utils/markdownGenerator';
 import { exportToHtml } from './utils/htmlExporter';
+import ApiKeyModal from './components/ApiKeyModal';
 
 const EXAMPLE_ITINERARY = `
 日本東京五天四夜行程
@@ -31,16 +32,39 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.VISUAL);
+  const [userApiKey, setUserApiKey] = useState('');
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('trippr_gemini_api_key');
+    if (savedKey) {
+      setUserApiKey(savedKey);
+    }
+  }, []);
+
+  const handleSaveApiKey = (key: string) => {
+    setUserApiKey(key);
+    if (key) {
+      localStorage.setItem('trippr_gemini_api_key', key);
+    } else {
+      localStorage.removeItem('trippr_gemini_api_key');
+    }
+  };
 
   const handleParse = async () => {
     if (!inputText.trim()) return;
+    
+    if (!userApiKey && !process.env.API_KEY) {
+      setIsApiKeyModalOpen(true);
+      return;
+    }
     
     setLoading(true);
     setError(null);
     setItinerary(null);
     
     try {
-      const result = await parseItinerary(inputText);
+      const result = await parseItinerary(inputText, userApiKey);
       setItinerary(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : '發生未知錯誤，請稍後再試。');
@@ -71,8 +95,15 @@ function App() {
             <span className="text-2xl">✈️</span>
             <h1 className="font-bold text-xl text-slate-800">Trippr <span className="text-slate-400 font-normal text-sm ml-1 hidden sm:inline">智能行程助手</span></h1>
           </div>
-          <div className="flex gap-4">
-             {/* Future: User Auth or Settings */}
+          <div className="flex gap-4 items-center">
+             <button
+               onClick={() => setIsApiKeyModalOpen(true)}
+               className="text-sm font-medium text-slate-600 hover:text-blue-600 flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+               title="設定自訂 API Key"
+             >
+               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+               {userApiKey ? '已設定 API Key' : '設定 API Key'}
+             </button>
           </div>
         </div>
       </header>
@@ -220,6 +251,13 @@ function App() {
           <p>Powered by Google Gemini 2.0 Pro</p>
         </div>
       </footer>
+
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        onSave={handleSaveApiKey}
+        initialKey={userApiKey}
+      />
     </div>
   );
 }
